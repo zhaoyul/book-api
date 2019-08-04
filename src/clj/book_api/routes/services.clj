@@ -56,43 +56,38 @@
      {:handler
       (fn [_]
         {:status 200
-         :body (db/get-books)})}}]
+         :body (let [books (db/get-books)
+                     historys (map (fn [h]
+                                     (if (= 1 (:已经归还 h))
+                                       (assoc h :已经归还 true)
+                                       (assoc h :已经归还 false)))
+                                   (db/get-historys))
+                     history-groups (group-by :book-id historys)]
+                 (map (fn [book] (assoc book :history (history-groups (:id book))))
+                      books)
+                 )})}}]
 
-   ["/math"
-    {:swagger {:tags ["math"]}}
+   ["/history"
+    {:post
+     {:parameters {:body any?}
+      :handler
+      (fn [{{:keys [:book-id :借书人 :借书日期 :还书日期 :评价 :已经归还]} :body-params}]
+        (db/insert-history {:book-id book-id
+                            :borrower-name 借书人
+                            :start-time 借书日期
+                            :end-time 还书日期
+                            :comments 评价})
+        {:status 200
+         :body (db/get-last-history {:book-id book-id})})}}]
 
-    ["/plus"
-     {:get {:summary "plus with spec query parameters"
-            :parameters {:query {:x int?, :y int?}}
-            :responses {200 {:body {:total pos-int?}}}
-            :handler (fn [{{{:keys [x y]} :query} :parameters}]
-                       {:status 200
-                        :body {:total (+ x y)}})}
-      :post {:summary "plus with spec body parameters"
-             :parameters {:body {:x int?, :y int?}}
-             :responses {200 {:body {:total pos-int?}}}
-             :handler (fn [{{{:keys [x y]} :body} :parameters}]
-                        {:status 200
-                         :body {:total (+ x y)}})}}]]
+   ["/return"
+    {:post
+     {:parameters {:body any?}
+      :handler
+      (fn [{{:keys [rowid]} :body-params}]
+        (db/udpate-history {:rowid rowid})
+        {:status 200
+         :body {:good 1}
+         })}}]
 
-   ["/files"
-    {:swagger {:tags ["files"]}}
-
-    ["/upload"
-     {:post {:summary "upload a file"
-             :parameters {:multipart {:file multipart/temp-file-part}}
-             :responses {200 {:body {:name string?, :size int?}}}
-             :handler (fn [{{{:keys [file]} :multipart} :parameters}]
-                        {:status 200
-                         :body {:name (:filename file)
-                                :size (:size file)}})}}]
-
-    ["/download"
-     {:get {:summary "downloads a file"
-            :swagger {:produces ["image/png"]}
-            :handler (fn [_]
-                       {:status 200
-                        :headers {"Content-Type" "image/png"}
-                        :body (-> "public/img/warning_clojure.png"
-                                  (io/resource)
-                                  (io/input-stream))})}}]]])
+   ])
