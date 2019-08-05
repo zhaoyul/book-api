@@ -63,8 +63,10 @@
                                        (assoc h :已经归还 false)))
                                    (db/get-historys))
                      history-groups (group-by :book-id historys)]
-                 (map (fn [book] (assoc book :history (history-groups (:id book))))
-                      books)
+                 (map
+                  (fn [book]
+                    (assoc book :history (history-groups (:id book))))
+                  books)
                  )})}}]
 
    ["/history"
